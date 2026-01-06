@@ -1,0 +1,57 @@
+'use client'
+
+import { useState } from 'react';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { getOrCreateGuestId, getGuestName } from '@/lib/guestUser';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+
+interface VoteCardsProps {
+  storyId: string;
+  currentVote: number | null;
+  disabled?: boolean;
+}
+
+const VOTE_OPTIONS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+
+export function VoteCards({ storyId, currentVote, disabled }: VoteCardsProps) {
+  const [isVoting, setIsVoting] = useState(false);
+
+  const handleVote = async (point: number) => {
+    setIsVoting(true);
+    
+    try {
+      const voterId = getOrCreateGuestId();
+      const voterName = getGuestName() || 'Anonymous';
+      
+      await setDoc(doc(db, 'stories', storyId, 'votes', voterId), {
+        point,
+        voterId,
+        voterName,
+        storyId,
+        createdAt: serverTimestamp(),
+      });
+    } catch (error) {
+      console.error('Error voting:', error);
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  return (
+    <div className="grid grid-cols-5 gap-2">
+      {VOTE_OPTIONS.map((point) => (
+        <Button
+          key={point}
+          variant={currentVote === point ? 'default' : 'outline'}
+          onClick={() => handleVote(point)}
+          disabled={disabled || isVoting}
+          className="h-16 text-lg font-bold"
+        >
+          {point}
+        </Button>
+      ))}
+    </div>
+  );
+}
