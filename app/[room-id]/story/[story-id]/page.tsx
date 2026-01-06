@@ -248,14 +248,6 @@ export default function StoryPage({ params }: StoryPageProps) {
           </Button>
 
           {isStoryCreator && <div className="flex items-center gap-2">
-            {story.status === 'completed' && nextStory && (
-              <Button 
-                onClick={handleNextStory}
-                disabled={isNavigating}
-              >
-                {isNavigating ? 'Loading...' : `Next: ${nextStory.ticketId}`} →
-              </Button>
-            )}
             {story.status === 'completed' && (
               <Button variant="outline" onClick={handleResetStory}>
                 Reset Story
@@ -267,6 +259,14 @@ export default function StoryPage({ params }: StoryPageProps) {
                 story={story}
                 trigger={<Button variant="outline">Edit Story</Button>}
               />
+            )}
+            {story.status === 'completed' && nextStory && (
+              <Button 
+                onClick={handleNextStory}
+                disabled={isNavigating}
+              >
+                {isNavigating ? 'Loading...' : `Next: ${nextStory.ticketId}`} →
+              </Button>
             )}
           </div>}
         </div>
