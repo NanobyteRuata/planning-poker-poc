@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, onSnapshot, query, deleteDoc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, query, where, orderBy, limit, deleteDoc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOrCreateGuestId } from '@/lib/guestUser';
 import { useStoryPresence } from '@/hooks/useStoryPresence';
+import { useParticipantRedirect } from '@/hooks/useParticipantRedirect';
 import type { Story, Vote } from '@/types/story';
 import type { Room } from '@/types/room';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -29,11 +30,14 @@ export default function StoryPage({ params }: StoryPageProps) {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [nextStory, setNextStory] = useState<Story | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   const currentUserId = getOrCreateGuestId();
   const isStoryCreator = story?.createdBy === currentUserId;
   
   useStoryPresence(roomId, storyId);
+  useParticipantRedirect(roomId, storyId);
 
   useEffect(() => {
     params.then(async (resolvedParams) => {
@@ -103,6 +107,44 @@ export default function StoryPage({ params }: StoryPageProps) {
     return () => unsubscribe();
   }, [storyId]);
 
+  // Fetch next active story when current story is completed
+  useEffect(() => {
+    if (!story || !roomId || story.status !== 'completed') {
+      setNextStory(null);
+      return;
+    }
+
+    const fetchNextStory = async () => {
+      try {
+        const storiesRef = collection(db, 'stories');
+        const q = query(
+          storiesRef,
+          where('roomId', '==', roomId),
+          where('status', '==', 'active'),
+          orderBy('createdAt', 'asc'),
+          limit(1)
+        );
+
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          const nextStoryData = {
+            id: snapshot.docs[0].id,
+            ...snapshot.docs[0].data(),
+            createdAt: snapshot.docs[0].data().createdAt?.toDate() || new Date(),
+          } as Story;
+          setNextStory(nextStoryData);
+        } else {
+          setNextStory(null);
+        }
+      } catch (error) {
+        console.error('Error fetching next story:', error);
+        setNextStory(null);
+      }
+    };
+
+    fetchNextStory();
+  }, [story, roomId]);
+
 
   const handleDeleteStory = async () => {
     if (!story || !confirm('Are you sure you want to delete this story?')) return;
@@ -141,7 +183,33 @@ export default function StoryPage({ params }: StoryPageProps) {
     } finally {
       setIsLoading(false);
     }
-  }
+  };
+
+  const handleNextStory = async () => {
+    if (!nextStory || !roomId) return;
+    setIsNavigating(true);
+    
+    try {
+      // Update all participants viewing current story to view next story
+      const participantsRef = collection(db, 'rooms', roomId, 'participants');
+      const q = query(participantsRef, where('currentStoryId', '==', storyId));
+      const participantsSnapshot = await getDocs(q);
+      
+      const batch = writeBatch(db);
+      participantsSnapshot.docs.forEach((participantDoc) => {
+        batch.update(participantDoc.ref, {
+          currentStoryId: nextStory.id,
+        });
+      });
+      await batch.commit();
+
+      // Navigate to next story
+      router.push(`/${roomId}/story/${nextStory.id}`);
+    } catch (error) {
+      console.error('Error navigating to next story:', error);
+      setIsNavigating(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -180,14 +248,26 @@ export default function StoryPage({ params }: StoryPageProps) {
           </Button>
 
           {isStoryCreator && <div className="flex items-center gap-2">
-            {story.status === 'completed' && <Button variant="outline" onClick={handleResetStory}>
-              Reset Story
-            </Button>}
-            <StoryFormDialog 
-            roomId={roomId}
-            story={story}
-            trigger={<Button>Edit Story</Button>}
-          />
+            {story.status === 'completed' && nextStory && (
+              <Button 
+                onClick={handleNextStory}
+                disabled={isNavigating}
+              >
+                {isNavigating ? 'Loading...' : `Next: ${nextStory.ticketId}`} →
+              </Button>
+            )}
+            {story.status === 'completed' && (
+              <Button variant="outline" onClick={handleResetStory}>
+                Reset Story
+              </Button>
+            )}
+            {story.status === 'active' && (
+              <StoryFormDialog 
+                roomId={roomId}
+                story={story}
+                trigger={<Button variant="outline">Edit Story</Button>}
+              />
+            )}
           </div>}
         </div>
 

@@ -6,26 +6,30 @@ import { db } from '@/lib/firebase';
 import { StoryList } from '@/components/StoryList';
 import { StoryFormDialog } from '@/components/StoryFormDialog';
 import { Button } from '@/components/ui/button';
-
+import { getOrCreateGuestId } from '@/lib/guestUser';
+import type { Room } from '@/types/room';
 interface RoomPageProps {
   params: Promise<{ "room-id": string }>;
 }
 
 export default function RoomPage({ params }: RoomPageProps) {
-  const [roomId, setRoomId] = useState<string>('');
-  const [roomName, setRoomName] = useState<string>('');
+  const [room, setRoom] = useState<Room | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [roomNotFound, setRoomNotFound] = useState(false);
+  const currentUserId = getOrCreateGuestId();
+  const isRoomCreator = room?.createdBy === currentUserId;
 
   useEffect(() => {
     params.then(async (resolvedParams) => {
       const id = resolvedParams["room-id"];
-      setRoomId(id);
-      
       try {
         const roomDoc = await getDoc(doc(db, 'rooms', id));
         if (roomDoc.exists()) {
-          setRoomName(roomDoc.data().name);
+          setRoom({
+            id: roomDoc.id,
+            ...roomDoc.data(),
+            createdAt: roomDoc.data().createdAt?.toDate(),
+          } as Room);
         } else {
           setRoomNotFound(true);
         }
@@ -46,7 +50,7 @@ export default function RoomPage({ params }: RoomPageProps) {
     );
   }
 
-  if (roomNotFound) {
+  if (roomNotFound || !room) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-2">
@@ -61,18 +65,20 @@ export default function RoomPage({ params }: RoomPageProps) {
     <div className="min-h-screen p-4 md:p-8">
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">{roomName}</h1>
+          <h1 className="text-3xl font-bold">{room.name}</h1>
         </div>
         
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">Stories</h2>
-            <StoryFormDialog 
-              roomId={roomId}
-              trigger={<Button>Add Story</Button>}
-            />
+            {
+              isRoomCreator && <StoryFormDialog 
+                roomId={room.id}
+                trigger={<Button>Add Story</Button>}
+              />
+            }
           </div>
-          <StoryList roomId={roomId} />
+          <StoryList roomId={room.id} />
         </div>
       </div>
     </div>
