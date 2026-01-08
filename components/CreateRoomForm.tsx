@@ -26,6 +26,8 @@ export function CreateRoomForm() {
         name: roomName.trim(),
         createdBy: guestId,
         createdAt: serverTimestamp(),
+        sessionStatus: 'idle',
+        currentStoryId: null,
       });
       
       router.push(`/${roomRef.id}`);

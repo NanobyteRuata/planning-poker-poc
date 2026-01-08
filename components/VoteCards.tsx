@@ -9,16 +9,16 @@ import { Card } from '@/components/ui/card';
 
 interface VoteCardsProps {
   storyId: string;
-  currentVote: number | null;
+  currentVote: number | string | null;
   disabled?: boolean;
 }
 
-const VOTE_OPTIONS = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+const VOTE_OPTIONS: (number | string)[] = ['?', 1, 2, 3, 5, 8, 13, 21, 34, 55];
 
 export function VoteCards({ storyId, currentVote, disabled }: VoteCardsProps) {
   const [isVoting, setIsVoting] = useState(false);
 
-  const handleVote = async (point: number) => {
+  const handleVote = async (point: number | string) => {
     setIsVoting(true);
     
     try {

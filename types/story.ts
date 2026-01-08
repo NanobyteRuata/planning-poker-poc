@@ -17,7 +17,7 @@ export interface Story {
 
 export interface Vote {
   id: string;
-  point: number;
+  point: number | string;
   voterId: string;
   voterName: string;
   storyId: string;

@@ -32,12 +32,8 @@ export function StoryParticipantList({
 
   useEffect(() => {
     const participantsRef = collection(db, 'rooms', roomId, 'participants');
-    const q = query(
-      participantsRef,
-      where('currentStoryId', '==', storyId)
-    );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribe = onSnapshot(participantsRef, (snapshot) => {
       const participantsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
@@ -49,7 +45,7 @@ export function StoryParticipantList({
     });
 
     return () => unsubscribe();
-  }, [roomId, storyId]);
+  }, [roomId]);
 
   const getParticipantVote = (participantId: string) => {
     return votes.find(v => v.voterId === participantId);

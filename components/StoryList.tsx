@@ -7,13 +7,25 @@ import type { Story } from '@/types/story';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface StoryListProps {
   roomId: string;
+  currentStoryId?: string | null;
+  selectedStoryId?: string | null;
+  currentStoryStep?: string;
+  isSessionActive?: boolean;
+  onStorySelect?: (story: Story) => void;
 }
 
-export function StoryList({ roomId }: StoryListProps) {
+export function StoryList({ 
+  roomId, 
+  currentStoryId,
+  selectedStoryId,
+  currentStoryStep,
+  isSessionActive,
+  onStorySelect 
+}: StoryListProps) {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,30 +112,53 @@ export function StoryList({ roomId }: StoryListProps) {
 
   return (
     <div className="flex flex-col gap-3">
-      {sortedStories.map((story) => (
-        <Link key={story.id} href={`/${roomId}/story/${story.id}`}>
-          <Card className="hover:bg-accent/50 transition-colors cursor-pointer">
+      {sortedStories.map((story) => {
+        const isCurrentStory = currentStoryId === story.id;
+        const isSelectedStory = selectedStoryId === story.id;
+        const shouldPing = isCurrentStory && currentStoryStep === 'voting';
+        
+        return (
+          <Card 
+            key={story.id}
+            className={cn(
+              'transition-all cursor-pointer hover:bg-accent/30',
+              isSelectedStory && 'ring-2 ring-primary'
+            )}
+            onClick={() => onStorySelect?.(story)}
+          >
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge variant="outline">{story.ticketId}</Badge>
-                    {story.storyPoint !== null && (
-                      <Badge variant="default">{story.storyPoint} points</Badge>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  {isCurrentStory && (
+                    <div className="relative flex-shrink-0">
+                      <div className={cn(
+                        'w-3 h-3 rounded-full bg-green-500 absolute',
+                        shouldPing && 'animate-ping'
+                      )} />
+                      <div className="w-3 h-3 rounded-full bg-green-500 relative" />
+                    </div>
+                  )}
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="outline">{story.ticketId}</Badge>
+                      {story.storyPoint !== null && (
+                        <Badge variant="default">{story.storyPoint} points</Badge>
+                      )}
+                    </div>
+                    <CardTitle className="truncate text-sm">{story.name}</CardTitle>
+                    {story.description && (
+                      <CardDescription className="mt-2 line-clamp-2 text-xs">
+                        {story.description}
+                      </CardDescription>
                     )}
                   </div>
-                  <CardTitle className="truncate">{story.name}</CardTitle>
-                  {story.description && (
-                    <CardDescription className="mt-2 line-clamp-2">
-                      {story.description}
-                    </CardDescription>
-                  )}
                 </div>
               </div>
             </CardHeader>
           </Card>
-        </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }
