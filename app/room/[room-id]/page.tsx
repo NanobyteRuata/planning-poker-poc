@@ -14,9 +14,11 @@ import {
   updateDoc,
   deleteDoc,
   writeBatch,
+  setDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getOrCreateGuestId } from "@/lib/guestUser";
+import { getOrCreateGuestId, getGuestName } from "@/lib/guestUser";
 import type { Room } from "@/types/room";
 import type { Story, Vote } from "@/types/story";
 import { StoryList } from "@/components/StoryList";
@@ -32,7 +34,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PlayIcon, StopCircleIcon } from "lucide-react";
+import { PlayIcon, StopCircleIcon, ArrowLeftIcon } from "lucide-react";
+import Link from "next/link";
 interface RoomPageProps {
   params: Promise<{ "room-id": string }>;
 }
@@ -90,6 +93,41 @@ export default function RoomPage({ params }: RoomPageProps) {
     );
 
     return () => unsubscribe();
+  }, [roomId]);
+
+  useEffect(() => {
+    if (!roomId) return;
+
+    const addParticipant = async () => {
+      try {
+        const participantId = getOrCreateGuestId();
+        const participantName = getGuestName() || "Anonymous";
+
+        await setDoc(doc(db, "rooms", roomId, "participants", participantId), {
+          id: participantId,
+          name: participantName,
+          joinedAt: serverTimestamp(),
+          lastSeen: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Error adding participant:", error);
+      }
+    };
+
+    addParticipant();
+
+    const interval = setInterval(() => {
+      const participantId = getOrCreateGuestId();
+      updateDoc(doc(db, "rooms", roomId, "participants", participantId), {
+        lastSeen: serverTimestamp(),
+      }).catch((error) => {
+        console.error("Error updating participant presence:", error);
+      });
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+    };
   }, [roomId]);
 
   useEffect(() => {
@@ -392,6 +430,11 @@ export default function RoomPage({ params }: RoomPageProps) {
       <div className="max-w-[1800px] mx-auto space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
+            <Link href="/">
+              <Button variant="ghost" size="sm">
+                <ArrowLeftIcon className="w-4 h-4" />
+              </Button>
+            </Link>
             <h1 className="text-3xl font-bold">{room.name}</h1>
             {isSessionActive && (
               <Badge variant="default" className="text-sm">
@@ -475,29 +518,26 @@ export default function RoomPage({ params }: RoomPageProps) {
                           </CardDescription>
                         )}
                       </div>
-                      {isDisplayStoryCreator &&
-                        displayStory.status === "active" && (
-                          <div className="flex gap-2">
-                            <StoryFormDialog
-                              roomId={roomId}
-                              story={displayStory}
-                              trigger={
-                                <Button variant="outline" size="sm">
-                                  Edit
-                                </Button>
-                              }
-                            />
-                            {displayStory.id === currentStory?.id && (
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={handleDeleteStory}
-                              >
-                                Delete
+                      {isDisplayStoryCreator && (
+                        <div className="flex gap-2">
+                          <StoryFormDialog
+                            roomId={roomId}
+                            story={displayStory}
+                            trigger={
+                              <Button variant="outline" size="sm">
+                                Edit
                               </Button>
-                            )}
-                          </div>
-                        )}
+                            }
+                          />
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={handleDeleteStory}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
                 </Card>
@@ -511,20 +551,83 @@ export default function RoomPage({ params }: RoomPageProps) {
                         <CardTitle>Vote Results</CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                          {displayVotes.map((vote) => (
-                            <div
-                              key={vote.id}
-                              className="flex items-center justify-between p-3 bg-accent/50 rounded-lg"
-                            >
-                              <span className="font-medium">
-                                {vote.voterName}
-                              </span>
-                              <Badge variant="default" className="text-base">
-                                {vote.point} points
-                              </Badge>
-                            </div>
-                          ))}
+                        <div className="space-y-3">
+                          {(() => {
+                            const voteCounts = displayVotes.reduce(
+                              (acc, vote) => {
+                                const point = vote.point.toString();
+                                if (!acc[point]) {
+                                  acc[point] = {
+                                    point: vote.point,
+                                    count: 0,
+                                    voters: [],
+                                  };
+                                }
+                                acc[point].count++;
+                                acc[point].voters.push(vote.voterName);
+                                return acc;
+                              },
+                              {} as Record<
+                                string,
+                                {
+                                  point: number | string;
+                                  count: number;
+                                  voters: string[];
+                                }
+                              >
+                            );
+
+                            const sortedVotes = Object.values(voteCounts).sort(
+                              (a, b) => {
+                                if (a.point === "?") return 1;
+                                if (b.point === "?") return -1;
+                                const aNum =
+                                  typeof a.point === "number"
+                                    ? a.point
+                                    : parseFloat(a.point);
+                                const bNum =
+                                  typeof b.point === "number"
+                                    ? b.point
+                                    : parseFloat(b.point);
+                                return bNum - aNum;
+                              }
+                            );
+                            const maxCount = Math.max(
+                              ...sortedVotes.map((v) => v.count)
+                            );
+
+                            return sortedVotes.map((voteData) => (
+                              <div key={voteData.point} className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <div className="flex items-center gap-2">
+                                    <Badge
+                                      variant="outline"
+                                      className="font-bold"
+                                    >
+                                      {voteData.point}{" "}
+                                      {voteData.point === 1
+                                        ? "point"
+                                        : "points"}
+                                    </Badge>
+                                    <span className="text-muted-foreground">
+                                      {voteData.count}{" "}
+                                      {voteData.count === 1 ? "vote" : "votes"}
+                                    </span>
+                                  </div>
+                                </div>
+                                <div className="relative h-4 bg-accent/30 rounded-lg overflow-hidden">
+                                  <div
+                                    className="absolute inset-y-0 left-0 bg-primary/80 rounded-lg transition-all"
+                                    style={{
+                                      width: `${
+                                        (voteData.count / maxCount) * 100
+                                      }%`,
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            ));
+                          })()}
                         </div>
                       </CardContent>
                     </Card>
@@ -542,20 +645,21 @@ export default function RoomPage({ params }: RoomPageProps) {
             )}
           </div>
 
-          
           <div className="space-y-6">
-            {currentStory && currentStory.id === selectedStory?.id && currentStory.status === "active" && (
-              <StoryWorkflowControl
-                story={currentStory}
-                isCreator={isStoryCreator}
-              />
-            )}
+            {currentStory &&
+              currentStory.id === selectedStory?.id &&
+              currentStory.status === "active" && (
+                <StoryWorkflowControl
+                  story={currentStory}
+                  isCreator={isStoryCreator}
+                />
+              )}
 
             <StoryParticipantList
               roomId={roomId}
               storyId={selectedStory?.id || ""}
               currentStep={selectedStory?.currentStep || "overview"}
-              votes={votes}
+              votes={selectedStoryVotes}
               roomCreatorId={room?.createdBy}
             />
           </div>

@@ -30,7 +30,7 @@ export function CreateRoomForm() {
         currentStoryId: null,
       });
       
-      router.push(`/${roomRef.id}`);
+      router.push(`/room/${roomRef.id}`);
     } catch (error) {
       console.error('Error creating room:', error);
       setIsCreating(false);

@@ -51,6 +51,13 @@ export function StoryParticipantList({
     return votes.find(v => v.voterId === participantId);
   };
 
+  const isParticipantOnline = (participant: Participant) => {
+    const now = new Date();
+    const lastSeen = participant.lastSeen;
+    const diffInSeconds = (now.getTime() - lastSeen.getTime()) / 1000;
+    return diffInSeconds < 60;
+  };
+
   const renderParticipantStatus = (participant: Participant) => {
     const vote = getParticipantVote(participant.id);
 
@@ -111,16 +118,25 @@ export function StoryParticipantList({
             <p className="text-sm text-muted-foreground">No participants in this story yet</p>
           ) : (
             <ul className="space-y-2">
-              {participants.map((participant) => (
-                <li key={participant.id} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-500" />
-                  <span className="text-sm flex-1">{participant.name}</span>
-                  {roomCreatorId === participant.id && (
-                    <Badge variant="outline" className="text-xs">Host</Badge>
-                  )}
-                  {renderParticipantStatus(participant)}
-                </li>
-              ))}
+              {participants
+                .filter((participant) => {
+                  const isOnline = isParticipantOnline(participant);
+                  const hasVote = getParticipantVote(participant.id);
+                  return isOnline || hasVote;
+                })
+                .map((participant) => {
+                  const isOnline = isParticipantOnline(participant);
+                  return (
+                    <li key={participant.id} className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`} />
+                      <span className="text-sm flex-1">{participant.name}</span>
+                      {roomCreatorId === participant.id && (
+                        <Badge variant="outline" className="text-xs">Host</Badge>
+                      )}
+                      {renderParticipantStatus(participant)}
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </CardContent>
