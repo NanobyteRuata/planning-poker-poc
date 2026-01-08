@@ -1,13 +1,29 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Story } from '@/types/story';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortableStoryCard } from '@/components/SortableStoryCard';
 
 interface StoryListProps {
   roomId: string;
@@ -66,10 +82,42 @@ export function StoryList({
       if (a.status !== b.status) {
         return a.status === 'active' ? -1 : 1;
       }
-      // Then sort by createdAt (newest first)
-      return b.createdAt.getTime() - a.createdAt.getTime();
+      // Then sort by order
+      return (a.order || 0) - (b.order || 0);
     });
   }, [stories]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = sortedStories.findIndex((story) => story.id === active.id);
+    const newIndex = sortedStories.findIndex((story) => story.id === over.id);
+
+    const reorderedStories = arrayMove(sortedStories, oldIndex, newIndex);
+
+    // Update order in Firestore
+    try {
+      const batch = writeBatch(db);
+      reorderedStories.forEach((story, index) => {
+        const storyRef = doc(db, 'stories', story.id);
+        batch.update(storyRef, { order: index });
+      });
+      await batch.commit();
+    } catch (error) {
+      console.error('Error updating story order:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -111,54 +159,29 @@ export function StoryList({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {sortedStories.map((story) => {
-        const isCurrentStory = currentStoryId === story.id;
-        const isSelectedStory = selectedStoryId === story.id;
-        const shouldPing = isCurrentStory && currentStoryStep === 'voting';
-        
-        return (
-          <Card 
-            key={story.id}
-            className={cn(
-              'transition-all cursor-pointer hover:bg-accent/30',
-              isSelectedStory && 'ring-2 ring-primary'
-            )}
-            onClick={() => onStorySelect?.(story)}
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex items-center gap-3 flex-1 min-w-0">
-                  {isCurrentStory && (
-                    <div className="relative flex-shrink-0">
-                      <div className={cn(
-                        'w-3 h-3 rounded-full bg-green-500 absolute',
-                        shouldPing && 'animate-ping'
-                      )} />
-                      <div className="w-3 h-3 rounded-full bg-green-500 relative" />
-                    </div>
-                  )}
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Badge variant="outline">{story.ticketId}</Badge>
-                      {story.storyPoint !== null && (
-                        <Badge variant="default">{story.storyPoint} points</Badge>
-                      )}
-                    </div>
-                    <CardTitle className="truncate text-sm">{story.name}</CardTitle>
-                    {story.description && (
-                      <CardDescription className="mt-2 line-clamp-2 text-xs">
-                        {story.description}
-                      </CardDescription>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        );
-      })}
-    </div>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext
+        items={sortedStories.map((s) => s.id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="flex flex-col gap-3">
+          {sortedStories.map((story) => (
+            <SortableStoryCard
+              key={story.id}
+              story={story}
+              isCurrentStory={currentStoryId === story.id}
+              isSelectedStory={selectedStoryId === story.id}
+              shouldPing={currentStoryId === story.id && currentStoryStep === 'voting'}
+              onStorySelect={onStorySelect}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
+

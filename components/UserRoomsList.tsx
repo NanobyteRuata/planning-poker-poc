@@ -4,17 +4,42 @@ import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOrCreateGuestId } from '@/lib/guestUser';
+import { deleteRoom } from '@/lib/roomUtils';
 import type { Room } from '@/types/room';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import Link from 'next/link';
-import { ArrowRightIcon } from 'lucide-react';
+import { ArrowRightIcon, Trash2Icon } from 'lucide-react';
 
 export function UserRoomsList() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ roomId: string; roomName: string } | null>(null);
   const currentUserId = getOrCreateGuestId();
+
+  const handleDeleteClick = (roomId: string, roomName: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setConfirmDelete({ roomId, roomName });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+
+    setDeletingRoomId(confirmDelete.roomId);
+    try {
+      await deleteRoom(confirmDelete.roomId);
+    } catch (error) {
+      console.error('Error deleting room:', error);
+      alert('Failed to delete room. Please try again.');
+    } finally {
+      setDeletingRoomId(null);
+      setConfirmDelete(null);
+    }
+  };
 
   useEffect(() => {
     const roomsRef = collection(db, 'rooms');
@@ -62,27 +87,48 @@ export function UserRoomsList() {
       <CardContent className='overflow-auto'>
         <div className="flex flex-col gap-2">
           {rooms.map((room) => (
-            <Link key={room.id} href={`/room/${room.id}`}>
-              <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-medium truncate">{room.name}</p>
-                    {room.sessionStatus === 'active' && (
-                      <Badge variant="default" className="text-xs">Active</Badge>
-                    )}
+            <div key={room.id} className="flex items-center gap-2">
+              <Link href={`/room/${room.id}`} className="flex-1">
+                <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <p className="font-medium truncate">{room.name}</p>
+                      {room.sessionStatus === 'active' && (
+                        <Badge variant="default" className="text-xs">Active</Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Created {room.createdAt?.toLocaleDateString() || 'Unknown'}
+                    </p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Created {room.createdAt?.toLocaleDateString() || 'Unknown'}
-                  </p>
+                  <Button variant="ghost" size="sm">
+                    <ArrowRightIcon className="w-4 h-4" />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="sm">
-                  <ArrowRightIcon className="w-4 h-4" />
-                </Button>
-              </div>
-            </Link>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => handleDeleteClick(room.id, room.name, e)}
+                disabled={deletingRoomId === room.id}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2Icon className="w-4 h-4" />
+              </Button>
+            </div>
           ))}
         </div>
       </CardContent>
+      <ConfirmDialog
+        open={!!confirmDelete}
+        onOpenChange={(open) => !open && setConfirmDelete(null)}
+        title="Delete Room"
+        description={`Are you sure you want to delete "${confirmDelete?.roomName}"? This will permanently delete all stories, votes, and participants in this room. This action cannot be undone.`}
+        confirmText="Delete Room"
+        cancelText="Cancel"
+        onConfirm={handleConfirmDelete}
+        variant="destructive"
+      />
     </Card>
   );
 }

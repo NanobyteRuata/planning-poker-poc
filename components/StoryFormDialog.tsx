@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, updateDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { getOrCreateGuestId } from '@/lib/guestUser';
 import type { Story } from '@/types/story';
@@ -64,6 +64,18 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
       } else {
         // Create new story
         const guestId = getOrCreateGuestId();
+        
+        // Get the highest order number for this room
+        const storiesRef = collection(db, 'stories');
+        const q = query(
+          storiesRef,
+          where('roomId', '==', roomId),
+          orderBy('order', 'desc'),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+        const maxOrder = snapshot.empty ? 0 : (snapshot.docs[0].data().order || 0);
+        
         await addDoc(collection(db, 'stories'), {
           ticketId: ticketId.trim(),
           name: name.trim(),
@@ -76,6 +88,7 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
           votesRevealed: false,
           totalVotes: 0,
           currentStep: 'overview',
+          order: maxOrder + 1,
         });
       }
       

@@ -13,6 +13,7 @@ export interface Story {
   votesRevealed: boolean;
   totalVotes?: number;
   currentStep: StoryStep;
+  order: number;
 }
 
 export interface Vote {
