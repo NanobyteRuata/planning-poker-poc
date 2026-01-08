@@ -25,7 +25,10 @@ export function VoteCards({ storyId, currentVote, disabled }: VoteCardsProps) {
       const voterId = getOrCreateGuestId();
       const voterName = getGuestName() || 'Anonymous';
       
-      await setDoc(doc(db, 'stories', storyId, 'votes', voterId), {
+      // Use a composite key for the vote document ID
+      const voteId = `${storyId}_${voterId}`;
+      
+      await setDoc(doc(db, 'votes', voteId), {
         point,
         voterId,
         voterName,
