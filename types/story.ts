@@ -14,6 +14,7 @@ export interface Story {
   totalVotes?: number;
   currentStep: StoryStep;
   order: number;
+  jiraCloudId?: string;
 }
 
 export interface Vote {

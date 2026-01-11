@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { JiraTicketSelector } from '@/components/JiraTicketSelector';
 
 interface StoryFormDialogProps {
   roomId: string;
@@ -30,6 +31,7 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
   const [ticketId, setTicketId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [jiraCloudId, setJiraCloudId] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!story;
@@ -39,10 +41,12 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
       setTicketId(story.ticketId);
       setName(story.name);
       setDescription(story.description);
+      setJiraCloudId(story.jiraCloudId || '');
     } else {
       setTicketId('');
       setName('');
       setDescription('');
+      setJiraCloudId('');
     }
   }, [story, open]);
 
@@ -60,6 +64,7 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
           ticketId: ticketId.trim(),
           name: name.trim(),
           description: description.trim(),
+          jiraCloudId: jiraCloudId || null,
         });
       } else {
         // Create new story
@@ -89,6 +94,7 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
           totalVotes: 0,
           currentStep: 'overview',
           order: maxOrder + 1,
+          jiraCloudId: jiraCloudId || null,
         });
       }
       
@@ -96,6 +102,7 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
       setTicketId('');
       setName('');
       setDescription('');
+      setJiraCloudId('');
       onSuccess?.();
     } catch (error) {
       console.error('Error saving story:', error);
@@ -120,11 +127,19 @@ export function StoryFormDialog({ roomId, story, trigger, onSuccess }: StoryForm
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="ticketId">Ticket ID</Label>
+            <Label htmlFor="ticketId">Jira Ticket</Label>
+            <JiraTicketSelector
+              onSelect={(issueKey, summary, cloudId) => {
+                setTicketId(issueKey);
+                setName(summary);
+                setJiraCloudId(cloudId);
+              }}
+              selectedTicket={ticketId}
+            />
             <Input
               id="ticketId"
               type="text"
-              placeholder="e.g., JIRA-123"
+              placeholder="Or enter ticket ID manually (e.g., JIRA-123)"
               value={ticketId}
               onChange={(e) => setTicketId(e.target.value)}
               disabled={isSubmitting}

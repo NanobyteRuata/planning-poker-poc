@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { StoryFormDialog } from "@/components/StoryFormDialog";
 import { EditRoomDialog } from "@/components/EditRoomDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { UserMenu } from "@/components/UserMenu";
 import { PlayIcon, StopCircleIcon, ArrowLeftIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 interface RoomHeaderProps {
@@ -99,6 +100,7 @@ export function RoomHeader({
             {isEnding ? "Ending..." : "End Session"}
           </Button>
         )}
+        <UserMenu />
       </div>
     </div>
 

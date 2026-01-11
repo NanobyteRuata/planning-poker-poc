@@ -9,6 +9,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useSession } from 'next-auth/react';
+import { ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface StoryWorkflowControlProps {
   story: Story;
@@ -16,8 +19,12 @@ interface StoryWorkflowControlProps {
 }
 
 export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlProps) {
+  const { data: session } = useSession();
   const [isUpdating, setIsUpdating] = useState(false);
   const [storyPoints, setStoryPoints] = useState<string>('');
+  const [updateJira, setUpdateJira] = useState(true);
+  const [jiraUpdateStatus, setJiraUpdateStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [jiraError, setJiraError] = useState<string>('');
 
   const stepLabels: Record<StoryStep, string> = {
     overview: 'Overview',
@@ -56,12 +63,44 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
     if (isNaN(points) || points < 0) return;
 
     setIsUpdating(true);
+    setJiraUpdateStatus('idle');
+    setJiraError('');
+
     try {
       await updateDoc(doc(db, 'stories', story.id), {
         currentStep: 'complete',
         status: 'completed',
         storyPoint: points,
       });
+
+      if (updateJira && story.ticketId && story.jiraCloudId && session?.accessToken) {
+        try {
+          const response = await fetch('/api/jira/update-story-points', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              issueKey: story.ticketId,
+              storyPoints: points,
+              cloudId: story.jiraCloudId,
+              addComment: true,
+            }),
+          });
+
+          if (response.ok) {
+            setJiraUpdateStatus('success');
+          } else {
+            const error = await response.json();
+            setJiraUpdateStatus('error');
+            setJiraError(error.error || 'Failed to update Jira');
+          }
+        } catch (jiraError) {
+          console.error('Error updating Jira:', jiraError);
+          setJiraUpdateStatus('error');
+          setJiraError('Failed to connect to Jira');
+        }
+      }
     } catch (error) {
       console.error('Error completing story:', error);
     } finally {
@@ -147,6 +186,44 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
                   required
                 />
               </div>
+              
+              {story.ticketId && story.jiraCloudId && session?.accessToken && (
+                <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                  <Checkbox
+                    id="updateJira"
+                    checked={updateJira}
+                    onCheckedChange={(checked) => setUpdateJira(checked as boolean)}
+                    disabled={isUpdating}
+                  />
+                  <div className="flex-1">
+                    <Label
+                      htmlFor="updateJira"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      Update Jira ticket {story.ticketId}
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Story points will be synced to Jira
+                    </p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+
+              {jiraUpdateStatus === 'success' && (
+                <div className="flex items-center gap-2 p-2 bg-green-50 text-green-700 rounded-md text-sm">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Jira ticket updated successfully
+                </div>
+              )}
+
+              {jiraUpdateStatus === 'error' && (
+                <div className="flex items-center gap-2 p-2 bg-red-50 text-red-700 rounded-md text-sm">
+                  <AlertCircle className="h-4 w-4" />
+                  {jiraError}
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={isUpdating || !storyPoints}
@@ -163,6 +240,12 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
             <p className="text-sm text-muted-foreground">
               Story has been completed with {story.storyPoint} points.
             </p>
+            {story.ticketId && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <ExternalLink className="h-3 w-3" />
+                <span>Linked to Jira: {story.ticketId}</span>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
