@@ -2,6 +2,7 @@ import NextAuth from "next-auth"
 import type { NextAuthConfig } from "next-auth"
 
 export const authConfig = {
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     {
       id: "atlassian",
