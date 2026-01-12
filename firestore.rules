@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isRoomCreator(roomId) {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy == request.auth.uid;
+    }
+    
+    function isTicketCreator(ticketId) {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/tickets/$(ticketId)).data.createdBy == request.auth.uid;
+    }
+    
+    // Rooms collection
+    match /rooms/{roomId} {
+      // Anyone can read rooms (for joining via link)
+      allow read: if true;
+      
+      // Only authenticated users can create rooms
+      allow create: if isSignedIn() && 
+                      request.resource.data.createdBy == request.auth.uid;
+      
+      // Only room creator can update/delete
+      allow update, delete: if isRoomCreator(roomId);
+      
+      // Participants subcollection
+      match /participants/{participantId} {
+        // Anyone can read participants
+        allow read: if true;
+        
+        // Users can only create/update their own participant document
+        allow create, update: if request.auth.uid == participantId;
+        
+        // Only room creator can delete participants
+        allow delete: if isRoomCreator(roomId);
+      }
+    }
+    
+    // Tickets collection
+    match /tickets/{ticketId} {
+      // Anyone can read tickets (for room participants)
+      allow read: if true;
+      
+      // Only authenticated users can create tickets
+      allow create: if isSignedIn() && 
+                      request.resource.data.createdBy == request.auth.uid;
+      
+      // Only ticket creator can update/delete
+      allow update, delete: if isTicketCreator(ticketId);
+    }
+    
+    // Votes collection
+    match /votes/{voteId} {
+      // Anyone can read votes (for room participants)
+      allow read: if true;
+      
+      // Users can only create/update their own votes
+      // Vote ID format: {storyId}_{voterId}
+      allow create, update: if isSignedIn() && 
+                              request.resource.data.voterId == request.auth.uid;
+      
+      // Users can delete their own votes
+      allow delete: if isSignedIn() && 
+                      resource.data.voterId == request.auth.uid;
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

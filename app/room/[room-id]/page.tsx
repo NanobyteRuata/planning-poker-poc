@@ -88,15 +88,54 @@ export default function RoomPage({ params }: RoomPageProps) {
       { merge: true }
     );
 
-    const interval = setInterval(() => {
+    let interval: NodeJS.Timeout | null = null;
+
+    const updatePresence = () => {
       updateDoc(participantRef, {
         lastSeen: serverTimestamp(),
       }).catch((error) => {
         console.error("Error updating presence:", error);
       });
-    }, 30000);
+    };
 
-    return () => clearInterval(interval);
+    const startInterval = () => {
+      if (!interval) {
+        interval = setInterval(updatePresence, 60000);
+      }
+    };
+
+    const stopInterval = () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        stopInterval();
+        updatePresence();
+      } else {
+        updatePresence();
+        startInterval();
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      updateDoc(participantRef, {
+        lastSeen: serverTimestamp(),
+      }).catch(() => {});
+    };
+
+    startInterval();
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      stopInterval();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, [roomId, currentUserId]);
 
   useEffect(() => {
