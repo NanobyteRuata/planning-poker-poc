@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       const roomId = roomDoc.id;
 
       // Delete all stories in this room
-      const storiesRef = collection(db, 'stories');
+      const storiesRef = collection(db, 'tickets');
       const roomStoriesQuery = query(
         storiesRef,
         where('roomId', '==', roomId)
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
 
       for (const storyDoc of storiesSnapshot.docs) {
         // Delete all votes in this story
-        const votesRef = collection(db, 'stories', storyDoc.id, 'votes');
+        const votesRef = collection(db, 'tickets', storyDoc.id, 'votes');
         const votesSnapshot = await getDocs(votesRef);
         
         const votesBatch = writeBatch(db);
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     }
 
     // Also clean up orphaned stories (stories without a valid room)
-    const allStoriesSnapshot = await getDocs(collection(db, 'stories'));
+    const allStoriesSnapshot = await getDocs(collection(db, 'tickets'));
     const allRoomsSnapshot = await getDocs(collection(db, 'rooms'));
     const validRoomIds = new Set(allRoomsSnapshot.docs.map(doc => doc.id));
 
@@ -91,7 +91,7 @@ export async function GET(request: Request) {
       const storyData = storyDoc.data();
       if (!validRoomIds.has(storyData.roomId)) {
         // Delete votes subcollection
-        const votesSnapshot = await getDocs(collection(db, 'stories', storyDoc.id, 'votes'));
+        const votesSnapshot = await getDocs(collection(db, 'tickets', storyDoc.id, 'votes'));
         const votesBatch = writeBatch(db);
         votesSnapshot.docs.forEach((voteDoc) => {
           votesBatch.delete(voteDoc.ref);

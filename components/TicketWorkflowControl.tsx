@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Story, StoryStep } from '@/types/story';
+import type { Ticket, TicketStep } from '@/types/story';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +13,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useSession } from 'next-auth/react';
 import { ExternalLink, CheckCircle2, AlertCircle } from 'lucide-react';
 
-interface StoryWorkflowControlProps {
-  story: Story;
+interface TicketWorkflowControlProps {
+  story: Ticket;
   isCreator: boolean;
 }
 
-export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlProps) {
+export function TicketWorkflowControl({ story, isCreator }: TicketWorkflowControlProps) {
   const { data: session } = useSession();
   const [isUpdating, setIsUpdating] = useState(false);
   const [storyPoints, setStoryPoints] = useState<string>('');
@@ -26,30 +26,32 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
   const [jiraUpdateStatus, setJiraUpdateStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [jiraError, setJiraError] = useState<string>('');
 
-  const stepLabels: Record<StoryStep, string> = {
+  const stepLabels: Record<TicketStep, string> = {
     overview: 'Overview',
     voting: 'Voting',
     reveal: 'Reveal Cards',
     complete: 'Complete',
   };
 
-  const stepDescriptions: Record<StoryStep, string> = {
-    overview: 'Participants are viewing the story details',
-    voting: 'Participants are voting on this story',
+  const stepDescriptions: Record<TicketStep, string> = {
+    overview: 'Participants are viewing the ticket details',
+    voting: 'Participants are voting on this ticket',
     reveal: 'Votes have been revealed to all participants',
-    complete: 'Story has been completed',
+    complete: 'Ticket has been completed',
   };
 
-  const handleStepChange = async (newStep: StoryStep) => {
+  const handleStepChange = async (newStep: TicketStep) => {
     setIsUpdating(true);
     try {
-      const updates: any = { currentStep: newStep };
+      const updates: Partial<Ticket> = {
+        currentStep: newStep,
+      };
       
       if (newStep === 'reveal') {
         updates.votesRevealed = true;
       }
       
-      await updateDoc(doc(db, 'stories', story.id), updates);
+      await updateDoc(doc(db, 'tickets', story.id), updates);
     } catch (error) {
       console.error('Error updating step:', error);
     } finally {
@@ -67,7 +69,7 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
     setJiraError('');
 
     try {
-      await updateDoc(doc(db, 'stories', story.id), {
+      await updateDoc(doc(db, 'tickets', story.id), {
         currentStep: 'complete',
         status: 'completed',
         storyPoint: points,
@@ -140,7 +142,7 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
         {story.currentStep === 'overview' && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Participants are viewing the story details. Start voting when ready.
+              Participants are viewing the ticket details. Start voting when ready.
             </p>
             <Button
               onClick={() => handleStepChange('voting')}
@@ -170,11 +172,11 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
         {story.currentStep === 'reveal' && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Cards have been revealed. Enter final story points to complete.
+              Cards have been revealed. Enter final ticket points to complete.
             </p>
             <form onSubmit={handleComplete} className="space-y-3">
               <div className="space-y-2">
-                <Label htmlFor="storyPoints">Final Story Points</Label>
+                <Label htmlFor="storyPoints">Final Ticket Points</Label>
                 <Input
                   id="storyPoints"
                   type="number"
@@ -203,7 +205,7 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
                       Update Jira ticket {story.ticketId}
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Story points will be synced to Jira
+                      Ticket points will be synced to Jira
                     </p>
                   </div>
                   <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -229,7 +231,7 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
                 disabled={isUpdating || !storyPoints}
                 className="w-full"
               >
-                {isUpdating ? 'Completing...' : 'Complete Story'}
+                {isUpdating ? 'Completing...' : 'Complete Ticket'}
               </Button>
             </form>
           </div>
@@ -238,7 +240,7 @@ export function StoryWorkflowControl({ story, isCreator }: StoryWorkflowControlP
         {story.currentStep === 'complete' && (
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">
-              Story has been completed with {story.storyPoint} points.
+              Ticket has been completed with {story.storyPoint} points.
             </p>
             {story.ticketId && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">

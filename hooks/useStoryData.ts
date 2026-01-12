@@ -3,10 +3,10 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Story } from '@/types/story';
+import type { Ticket } from '@/types/story';
 
 export function useCurrentStory(roomId: string | null, currentStoryId: string | null | undefined) {
-  const [currentStory, setCurrentStory] = useState<Story | null>(null);
+  const [currentStory, setCurrentStory] = useState<Ticket | null>(null);
 
   useEffect(() => {
     if (!roomId || !currentStoryId) {
@@ -15,14 +15,14 @@ export function useCurrentStory(roomId: string | null, currentStoryId: string | 
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, 'stories', currentStoryId),
+      doc(db, 'tickets', currentStoryId),
       (docSnapshot) => {
         if (docSnapshot.exists()) {
           setCurrentStory({
             id: docSnapshot.id,
             ...docSnapshot.data(),
             createdAt: docSnapshot.data().createdAt?.toDate() || new Date(),
-          } as Story);
+          } as Ticket);
         } else {
           setCurrentStory(null);
         }
@@ -45,7 +45,7 @@ export function useHasActiveStories(roomId: string | null) {
   useEffect(() => {
     if (!roomId) return;
 
-    const storiesRef = collection(db, 'stories');
+    const storiesRef = collection(db, 'tickets');
     const q = query(
       storiesRef,
       where('roomId', '==', roomId),

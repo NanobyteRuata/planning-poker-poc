@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateGuestId, getGuestName } from '@/lib/guestUser';
+import { getOrCreateUserId, getUserName } from '@/lib/userStorage';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -22,8 +22,8 @@ export function VoteCards({ storyId, currentVote, disabled }: VoteCardsProps) {
     setIsVoting(true);
     
     try {
-      const voterId = getOrCreateGuestId();
-      const voterName = getGuestName() || 'Anonymous';
+      const voterId = getOrCreateUserId();
+      const voterName = getUserName() || 'Anonymous';
       
       // Use a composite key for the vote document ID
       const voteId = `${storyId}_${voterId}`;

@@ -12,11 +12,11 @@ import {
   doc,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Story } from '@/types/story';
+import type { Ticket } from '@/types/story';
 
 export function useSessionManagement(
   roomId: string | null,
-  currentStory: Story | null,
+  currentStory: Ticket | null,
   isRoomCreator: boolean
 ) {
   const [isStarting, setIsStarting] = useState(false);
@@ -34,7 +34,7 @@ export function useSessionManagement(
 
     const advanceToNextStory = async () => {
       try {
-        const storiesRef = collection(db, 'stories');
+        const storiesRef = collection(db, 'tickets');
         const q = query(
           storiesRef,
           where('roomId', '==', roomId),
@@ -72,7 +72,7 @@ export function useSessionManagement(
     setIsStarting(true);
 
     try {
-      const storiesRef = collection(db, 'stories');
+      const storiesRef = collection(db, 'tickets');
       const q = query(
         storiesRef,
         where('roomId', '==', roomId),
@@ -89,7 +89,7 @@ export function useSessionManagement(
           currentStoryId: firstStoryId,
         });
       } else {
-        alert('No active stories to start session. Please create stories first.');
+        alert('No active tickets to start session. Please create tickets first.');
       }
     } catch (error) {
       console.error('Error starting session:', error);

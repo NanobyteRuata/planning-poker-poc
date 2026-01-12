@@ -6,23 +6,25 @@ import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/ca
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { GripVerticalIcon } from 'lucide-react';
-import type { Story } from '@/types/story';
+import type { Ticket } from '@/types/story';
 
-interface SortableStoryCardProps {
-  story: Story;
+interface SortableTicketCardProps {
+  story: Ticket;
   isCurrentStory: boolean;
   isSelectedStory: boolean;
   shouldPing: boolean;
-  onStorySelect?: (story: Story) => void;
+  isRoomCreator?: boolean;
+  onStorySelect?: (story: Ticket) => void;
 }
 
-export function SortableStoryCard({
+export function SortableTicketCard({
   story,
   isCurrentStory,
   isSelectedStory,
   shouldPing,
+  isRoomCreator = false,
   onStorySelect,
-}: SortableStoryCardProps) {
+}: SortableTicketCardProps) {
   const {
     attributes,
     listeners,
@@ -30,7 +32,10 @@ export function SortableStoryCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: story.id });
+  } = useSortable({ 
+    id: story.id,
+    disabled: !isRoomCreator,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -51,14 +56,16 @@ export function SortableStoryCard({
       <CardHeader>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button
-              className="cursor-grab active:cursor-grabbing touch-none"
-              {...attributes}
-              {...listeners}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <GripVerticalIcon className="w-4 h-4 text-muted-foreground" />
-            </button>
+            {isRoomCreator && (
+              <button
+                className="cursor-grab active:cursor-grabbing touch-none"
+                {...attributes}
+                {...listeners}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <GripVerticalIcon className="w-4 h-4 text-muted-foreground" />
+              </button>
+            )}
             
             {isCurrentStory && (
               <div className="relative flex-shrink-0">

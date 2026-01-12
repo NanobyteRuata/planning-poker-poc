@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { Search, ExternalLink, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { parseAdfToPlainText } from '@/lib/adfParser'
 
 interface JiraResource {
   id: string
@@ -34,6 +35,7 @@ interface JiraIssue {
   key: string
   fields: {
     summary: string
+    description?: string
     issuetype: {
       name: string
       iconUrl: string
@@ -45,7 +47,7 @@ interface JiraIssue {
 }
 
 interface JiraTicketSelectorProps {
-  onSelect: (issueKey: string, summary: string, cloudId: string) => void
+  onSelect: (issueKey: string, summary: string, cloudId: string, description?: string) => void
   selectedTicket?: string
 }
 
@@ -103,7 +105,10 @@ export function JiraTicketSelector({ onSelect, selectedTicket }: JiraTicketSelec
   }
 
   const handleSelectIssue = (issue: JiraIssue) => {
-    onSelect(issue.key, issue.fields.summary, selectedResource)
+    const description = issue.fields.description 
+      ? parseAdfToPlainText(issue.fields.description)
+      : undefined
+    onSelect(issue.key, issue.fields.summary, selectedResource, description)
     setOpen(false)
     setSearchQuery('')
     setSearchResults([])

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateGuestId } from '@/lib/guestUser';
+import { getOrCreateUserId } from '@/lib/userStorage';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -21,7 +21,7 @@ export function CreateRoomForm() {
     setIsCreating(true);
     
     try {
-      const guestId = getOrCreateGuestId();
+      const guestId = getOrCreateUserId();
       const roomRef = await addDoc(collection(db, 'rooms'), {
         name: roomName.trim(),
         createdBy: guestId,

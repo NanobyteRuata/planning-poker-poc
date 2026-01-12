@@ -53,6 +53,11 @@ export class JiraClient {
       throw new Error(`Jira API error: ${response.status} - ${error}`)
     }
 
+    // Handle 204 No Content responses (e.g., from PUT/DELETE requests)
+    if (response.status === 204 || response.headers.get('content-length') === '0') {
+      return null
+    }
+
     return response.json()
   }
 

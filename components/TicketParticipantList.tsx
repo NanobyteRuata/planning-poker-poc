@@ -3,31 +3,31 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateGuestId } from '@/lib/guestUser';
+import { getOrCreateUserId } from '@/lib/userStorage';
 import type { Participant } from '@/types/participant';
 import type { Vote } from '@/types/story';
-import type { StoryStep } from '@/types/story';
+import type { TicketStep } from '@/types/story';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { VoteCards } from '@/components/VoteCards';
 
-interface StoryParticipantListProps {
+interface TicketParticipantListProps {
   roomId: string;
   storyId: string;
-  currentStep: StoryStep;
+  currentStep: TicketStep;
   votes: Vote[];
   roomCreatorId?: string;
 }
 
-export function StoryParticipantList({ 
+export function TicketParticipantList({ 
   roomId, 
   storyId, 
   currentStep, 
   votes,
   roomCreatorId 
-}: StoryParticipantListProps) {
+}: TicketParticipantListProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const currentUserId = getOrCreateGuestId();
+  const currentUserId = getOrCreateUserId();
   const currentUserVote = votes.find(v => v.voterId === currentUserId);
 
   useEffect(() => {
@@ -115,7 +115,7 @@ export function StoryParticipantList({
         </CardHeader>
         <CardContent>
           {participants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No participants in this story yet</p>
+            <p className="text-sm text-muted-foreground">No participants in this ticket yet</p>
           ) : (
             <ul className="space-y-2">
               {participants

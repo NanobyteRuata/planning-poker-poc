@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { collection, onSnapshot, query, where, writeBatch, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Story } from '@/types/story';
+import type { Ticket } from '@/types/story';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,31 +23,33 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { SortableStoryCard } from '@/components/SortableStoryCard';
+import { SortableTicketCard } from '@/components/SortableTicketCard';
 
-interface StoryListProps {
+interface TicketListProps {
   roomId: string;
   currentStoryId?: string | null;
   selectedStoryId?: string | null;
   currentStoryStep?: string;
   isSessionActive?: boolean;
-  onStorySelect?: (story: Story) => void;
+  isRoomCreator?: boolean;
+  onStorySelect?: (story: Ticket) => void;
 }
 
-export function StoryList({ 
+export function TicketList({ 
   roomId, 
   currentStoryId,
   selectedStoryId,
   currentStoryStep,
   isSessionActive,
+  isRoomCreator = false,
   onStorySelect 
-}: StoryListProps) {
-  const [stories, setStories] = useState<Story[]>([]);
+}: TicketListProps) {
+  const [stories, setStories] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const storiesRef = collection(db, 'stories');
+    const storiesRef = collection(db, 'tickets');
     const q = query(
       storiesRef,
       where('roomId', '==', roomId)
@@ -60,15 +62,15 @@ export function StoryList({
           id: doc.id,
           ...doc.data(),
           createdAt: doc.data().createdAt?.toDate() || new Date(),
-        } as Story));
+        })) as Ticket[];
         
         setStories(storiesData);
         setLoading(false);
         setError(null);
       },
       (err) => {
-        console.error('Error fetching stories:', err);
-        setError('Failed to load stories');
+        console.error('Error fetching tickets:', err);
+        setError('Failed to load tickets');
         setLoading(false);
       }
     );
@@ -77,18 +79,15 @@ export function StoryList({
   }, [roomId]);
 
   const sortedStories = useMemo(() => {
-    return [...stories].sort((a, b) => {
-      // First sort by status (active first, then completed)
-      if (a.status !== b.status) {
-        return a.status === 'active' ? -1 : 1;
-      }
-      // Then sort by order
-      return (a.order || 0) - (b.order || 0);
-    });
+    return [...stories].sort((a, b) => (a.order || 0) - (b.order || 0));
   }, [stories]);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -101,6 +100,11 @@ export function StoryList({
       return;
     }
 
+    // Only allow room creator to reorder
+    if (!isRoomCreator) {
+      return;
+    }
+
     const oldIndex = sortedStories.findIndex((story) => story.id === active.id);
     const newIndex = sortedStories.findIndex((story) => story.id === over.id);
 
@@ -110,8 +114,7 @@ export function StoryList({
     try {
       const batch = writeBatch(db);
       reorderedStories.forEach((story, index) => {
-        const storyRef = doc(db, 'stories', story.id);
-        batch.update(storyRef, { order: index });
+        batch.update(doc(db, 'tickets', story.id), { order: index });
       });
       await batch.commit();
     } catch (error) {
@@ -149,9 +152,9 @@ export function StoryList({
     return (
       <Card>
         <CardHeader>
-          <CardTitle>No Stories</CardTitle>
+          <CardTitle>No Tickets</CardTitle>
           <CardDescription>
-            Create your first story to start planning poker!
+            Create your first ticket to start planning poker!
           </CardDescription>
         </CardHeader>
       </Card>
@@ -170,12 +173,13 @@ export function StoryList({
       >
         <div className="flex flex-col gap-3">
           {sortedStories.map((story) => (
-            <SortableStoryCard
+            <SortableTicketCard
               key={story.id}
               story={story}
               isCurrentStory={currentStoryId === story.id}
               isSelectedStory={selectedStoryId === story.id}
               shouldPing={currentStoryId === story.id && currentStoryStep === 'voting'}
+              isRoomCreator={isRoomCreator}
               onStorySelect={onStorySelect}
             />
           ))}

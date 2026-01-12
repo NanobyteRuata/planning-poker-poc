@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getOrCreateGuestId, getGuestName } from './guestUser'
+import { getOrCreateUserId, getUserName } from './userStorage'
 
 export interface User {
   id: string
@@ -20,8 +20,8 @@ export async function getCurrentUser(): Promise<User> {
     }
   }
   
-  const guestId = getOrCreateGuestId()
-  const guestName = getGuestName()
+  const guestId = getOrCreateUserId()
+  const guestName = getUserName()
   
   return {
     id: guestId,

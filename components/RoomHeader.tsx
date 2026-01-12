@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { StoryFormDialog } from "@/components/StoryFormDialog";
+import { TicketFormDialog } from "@/components/TicketFormDialog";
 import { EditRoomDialog } from "@/components/EditRoomDialog";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { UserMenu } from "@/components/UserMenu";
+import { RoomInviteLink } from "@/components/RoomInviteLink";
 import { PlayIcon, StopCircleIcon, ArrowLeftIcon, PencilIcon, Trash2Icon } from "lucide-react";
 
 interface RoomHeaderProps {
@@ -55,6 +56,7 @@ export function RoomHeader({
         )}
       </div>
       <div className="flex items-center gap-2">
+        <RoomInviteLink roomId={roomId} roomName={roomName} />
         {isRoomCreator && (
           <>
             <EditRoomDialog
@@ -78,9 +80,9 @@ export function RoomHeader({
         )}
         {isRoomCreator && !isSessionActive && (
           <>
-            <StoryFormDialog
+            <TicketFormDialog
               roomId={roomId}
-              trigger={<Button variant="outline">Add Story</Button>}
+              trigger={<Button variant="outline">Add Ticket</Button>}
             />
             {hasActiveStories && (
               <Button onClick={onStartSession} disabled={isStarting}>

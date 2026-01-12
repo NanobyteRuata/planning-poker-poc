@@ -12,7 +12,7 @@ import { db } from '@/lib/firebase';
 export async function deleteRoom(roomId: string): Promise<void> {
   try {
     // Delete all stories in this room
-    const storiesRef = collection(db, 'stories');
+    const storiesRef = collection(db, 'tickets');
     const roomStoriesQuery = query(storiesRef, where('roomId', '==', roomId));
     const storiesSnapshot = await getDocs(roomStoriesQuery);
 

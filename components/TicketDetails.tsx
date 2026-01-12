@@ -1,7 +1,7 @@
 'use client'
 
 import { Button } from "@/components/ui/button";
-import { StoryFormDialog } from "@/components/StoryFormDialog";
+import { TicketFormDialog } from "@/components/TicketFormDialog";
 import {
   Card,
   CardHeader,
@@ -10,23 +10,23 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Story } from "@/types/story";
+import type { Ticket } from "@/types/story";
 
-interface StoryDetailsProps {
-  story: Story;
+interface TicketDetailsProps {
+  story: Ticket;
   isCurrentStory: boolean;
   isStoryCreator: boolean;
   roomId: string;
   onDelete: () => void;
 }
 
-export function StoryDetails({
+export function TicketDetails({
   story,
   isCurrentStory,
   isStoryCreator,
   roomId,
   onDelete,
-}: StoryDetailsProps) {
+}: TicketDetailsProps) {
   return (
     <Card>
       <CardHeader>
@@ -43,7 +43,7 @@ export function StoryDetails({
                 {story.status}
               </Badge>
               {isCurrentStory && (
-                <Badge variant="default">Current Story</Badge>
+                <Badge variant="default">Current Ticket</Badge>
               )}
             </div>
             <CardTitle className="text-2xl">{story.name}</CardTitle>
@@ -55,7 +55,7 @@ export function StoryDetails({
           </div>
           {isStoryCreator && (
             <div className="flex gap-2">
-              <StoryFormDialog
+              <TicketFormDialog
                 roomId={roomId}
                 story={story}
                 trigger={

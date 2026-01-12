@@ -1,6 +1,6 @@
-export type StoryStep = 'overview' | 'voting' | 'reveal' | 'complete';
+export type TicketStep = 'overview' | 'voting' | 'reveal' | 'complete';
 
-export interface Story {
+export interface Ticket {
   id: string;
   ticketId: string;
   name: string;
@@ -12,7 +12,7 @@ export interface Story {
   createdAt: Date;
   votesRevealed: boolean;
   totalVotes?: number;
-  currentStep: StoryStep;
+  currentStep: TicketStep;
   order: number;
   jiraCloudId?: string;
 }
@@ -22,6 +22,6 @@ export interface Vote {
   point: number | string;
   voterId: string;
   voterName: string;
-  storyId: string;
+  ticketId: string;
   createdAt: Date;
 }
