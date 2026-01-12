@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateUserId } from '@/lib/userStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { Participant } from '@/types/participant';
 import type { Vote } from '@/types/story';
 import type { TicketStep } from '@/types/story';
@@ -27,7 +27,8 @@ export function TicketParticipantList({
   roomCreatorId 
 }: TicketParticipantListProps) {
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const currentUserId = getOrCreateUserId();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.id;
   const currentUserVote = votes.find(v => v.voterId === currentUserId);
 
   useEffect(() => {

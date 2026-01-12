@@ -15,7 +15,8 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
-import { getOrCreateUserId, getUserName } from "@/lib/userStorage";
+import { getUserName } from "@/lib/userStorage";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { deleteRoom } from "@/lib/roomUtils";
 import { useRouter } from "next/navigation";
 import type { Ticket } from "@/types/story";
@@ -42,7 +43,8 @@ export default function RoomPage({ params }: RoomPageProps) {
   const [showDeleteTicketConfirm, setShowDeleteTicketConfirm] = useState(false);
   const router = useRouter();
 
-  const currentUserId = getOrCreateUserId();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.id;
   
   const { room, isLoading, roomNotFound } = useRoomData(roomId);
   const currentTicket = useCurrentStory(roomId, room?.currentStoryId);

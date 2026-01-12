@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateUserId } from '@/lib/userStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -12,6 +12,7 @@ export function CreateRoomForm() {
   const [roomName, setRoomName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
+  const currentUser = useCurrentUser();
 
   const handleCreateRoom = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +22,9 @@ export function CreateRoomForm() {
     setIsCreating(true);
     
     try {
-      const guestId = getOrCreateUserId();
       const roomRef = await addDoc(collection(db, 'rooms'), {
         name: roomName.trim(),
-        createdBy: guestId,
+        createdBy: currentUser.id,
         createdAt: serverTimestamp(),
         sessionStatus: 'idle',
         currentStoryId: null,

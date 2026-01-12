@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { addDoc, collection, doc, updateDoc, serverTimestamp, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateUserId } from '@/lib/userStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import type { Ticket } from '@/types/story';
 import {
   Dialog,
@@ -31,7 +31,8 @@ export function TicketFormDialog({ roomId, story, trigger, onSuccess }: TicketFo
   const [ticketId, setTicketId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [jiraCloudId, setJiraCloudId] = useState('');
+  const [jiraCloudId, setJiraCloudId] = useState(story?.jiraCloudId || '');
+  const currentUser = useCurrentUser();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditMode = !!story;
@@ -68,7 +69,7 @@ export function TicketFormDialog({ roomId, story, trigger, onSuccess }: TicketFo
         });
       } else {
         // Create new story
-        const guestId = getOrCreateUserId();
+        const userId = currentUser.id;
         
         // Get the highest order number for this room
         const storiesRef = collection(db, 'tickets');
@@ -88,7 +89,7 @@ export function TicketFormDialog({ roomId, story, trigger, onSuccess }: TicketFo
           status: 'active',
           storyPoint: null,
           roomId,
-          createdBy: guestId,
+          createdBy: userId,
           createdAt: serverTimestamp(),
           votesRevealed: false,
           totalVotes: 0,

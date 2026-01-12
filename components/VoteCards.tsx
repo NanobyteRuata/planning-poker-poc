@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateUserId, getUserName } from '@/lib/userStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
@@ -17,13 +17,14 @@ const VOTE_OPTIONS: (number | string)[] = ['?', 1, 2, 3, 5, 8, 13, 21, 34, 55];
 
 export function VoteCards({ storyId, currentVote, disabled }: VoteCardsProps) {
   const [isVoting, setIsVoting] = useState(false);
+  const currentUser = useCurrentUser();
 
   const handleVote = async (point: number | string) => {
     setIsVoting(true);
     
     try {
-      const voterId = getOrCreateUserId();
-      const voterName = getUserName() || 'Anonymous';
+      const voterId = currentUser.id;
+      const voterName = currentUser.name || 'Anonymous';
       
       // Use a composite key for the vote document ID
       const voteId = `${storyId}_${voterId}`;

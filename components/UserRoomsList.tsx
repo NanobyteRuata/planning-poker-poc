@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { getOrCreateUserId } from '@/lib/userStorage';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { deleteRoom } from '@/lib/roomUtils';
 import type { Room } from '@/types/room';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -18,7 +18,8 @@ export function UserRoomsList() {
   const [isLoading, setIsLoading] = useState(true);
   const [deletingRoomId, setDeletingRoomId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ roomId: string; roomName: string } | null>(null);
-  const currentUserId = getOrCreateUserId();
+  const currentUser = useCurrentUser();
+  const currentUserId = currentUser.id;
 
   const handleDeleteClick = (roomId: string, roomName: string, e: React.MouseEvent) => {
     e.preventDefault();
