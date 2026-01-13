@@ -114,6 +114,12 @@ export function JiraTicketSelector({ onSelect, selectedTicket }: JiraTicketSelec
     setSearchResults([])
   }
 
+  const isAtlassianEnabled = process.env.NEXT_PUBLIC_ENABLE_ATLASSIAN_LOGIN === 'true'
+
+  if (!isAtlassianEnabled) {
+    return null
+  }
+
   if (!session) {
     return (
       <div className="text-sm text-muted-foreground">

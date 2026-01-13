@@ -1,10 +1,25 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SignInPage() {
+  const router = useRouter()
+  const isAtlassianEnabled = process.env.NEXT_PUBLIC_ENABLE_ATLASSIAN_LOGIN === 'true'
+
+  useEffect(() => {
+    if (!isAtlassianEnabled) {
+      router.push('/login')
+    }
+  }, [isAtlassianEnabled, router])
+
+  if (!isAtlassianEnabled) {
+    return null
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <Card className="w-full max-w-md">

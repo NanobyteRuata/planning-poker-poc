@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export function UserMenu() {
   const { data: session, status } = useSession()
+  const isAtlassianEnabled = process.env.NEXT_PUBLIC_ENABLE_ATLASSIAN_LOGIN === 'true'
 
   if (status === 'loading') {
     return (
@@ -23,6 +24,10 @@ export function UserMenu() {
   }
 
   if (!session?.user) {
+    if (!isAtlassianEnabled) {
+      return null
+    }
+    
     return (
       <Button
         onClick={() => signIn('atlassian')}

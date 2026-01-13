@@ -143,7 +143,7 @@ export function TicketFormDialog({ roomId, story, trigger, onSuccess }: TicketFo
             <Input
               id="ticketId"
               type="text"
-              placeholder="Or enter ticket ID manually (e.g., JIRA-123)"
+              placeholder="Enter ticket ID (e.g., JIRA-123)"
               value={ticketId}
               onChange={(e) => setTicketId(e.target.value)}
               disabled={isSubmitting}
