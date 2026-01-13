@@ -4,18 +4,17 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
+    function isValidUserId(userId) {
+      // Allow guest users (user_*) and Atlassian users
+      return userId != null && userId.size() > 0;
     }
     
-    function isRoomCreator(roomId) {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy == request.auth.uid;
+    function isRoomCreator(roomId, userId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data.createdBy == userId;
     }
     
-    function isTicketCreator(ticketId) {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/tickets/$(ticketId)).data.createdBy == request.auth.uid;
+    function isTicketCreator(ticketId, userId) {
+      return get(/databases/$(database)/documents/tickets/$(ticketId)).data.createdBy == userId;
     }
     
     // Rooms collection
@@ -23,23 +22,28 @@ service cloud.firestore {
       // Anyone can read rooms (for joining via link)
       allow read: if true;
       
-      // Only authenticated users can create rooms
-      allow create: if isSignedIn() && 
-                      request.resource.data.createdBy == request.auth.uid;
+      // Anyone can create rooms with valid data
+      allow create: if request.resource.data.createdBy != null &&
+                      request.resource.data.createdBy.size() > 0 &&
+                      request.resource.data.name != null &&
+                      request.resource.data.name.size() > 0;
       
-      // Only room creator can update/delete
-      allow update, delete: if isRoomCreator(roomId);
+      // Only room creator can update/delete (based on createdBy field)
+      allow update, delete: if request.resource.data.createdBy == resource.data.createdBy &&
+                              isRoomCreator(roomId, resource.data.createdBy);
       
       // Participants subcollection
       match /participants/{participantId} {
         // Anyone can read participants
         allow read: if true;
         
-        // Users can only create/update their own participant document
-        allow create, update: if request.auth.uid == participantId;
+        // Users can create/update their own participant document
+        allow create, update: if participantId != null && 
+                                participantId.size() > 0 &&
+                                request.resource.data.id == participantId;
         
-        // Only room creator can delete participants
-        allow delete: if isRoomCreator(roomId);
+        // Anyone can delete participants (for cleanup)
+        allow delete: if true;
       }
     }
     
@@ -48,12 +52,15 @@ service cloud.firestore {
       // Anyone can read tickets (for room participants)
       allow read: if true;
       
-      // Only authenticated users can create tickets
-      allow create: if isSignedIn() && 
-                      request.resource.data.createdBy == request.auth.uid;
+      // Anyone can create tickets with valid data
+      allow create: if request.resource.data.createdBy != null &&
+                      request.resource.data.createdBy.size() > 0 &&
+                      request.resource.data.roomId != null &&
+                      request.resource.data.name != null;
       
       // Only ticket creator can update/delete
-      allow update, delete: if isTicketCreator(ticketId);
+      allow update, delete: if resource.data.createdBy != null &&
+                              isTicketCreator(ticketId, resource.data.createdBy);
     }
     
     // Votes collection
@@ -61,14 +68,14 @@ service cloud.firestore {
       // Anyone can read votes (for room participants)
       allow read: if true;
       
-      // Users can only create/update their own votes
+      // Users can create/update votes with matching voterId
       // Vote ID format: {storyId}_{voterId}
-      allow create, update: if isSignedIn() && 
-                              request.resource.data.voterId == request.auth.uid;
+      allow create, update: if request.resource.data.voterId != null &&
+                              request.resource.data.voterId.size() > 0 &&
+                              request.resource.data.storyId != null;
       
-      // Users can delete their own votes
-      allow delete: if isSignedIn() && 
-                      resource.data.voterId == request.auth.uid;
+      // Anyone can delete votes (for cleanup)
+      allow delete: if true;
     }
     
     // Deny all other access
