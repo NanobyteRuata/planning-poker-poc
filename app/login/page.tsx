@@ -19,6 +19,7 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const callbackUrl = searchParams.get('callbackUrl') || '/'
+  const isAtlassianEnabled = process.env.NEXT_PUBLIC_ENABLE_ATLASSIAN_LOGIN === 'true'
 
   useEffect(() => {
     if (session?.user) {
@@ -112,26 +113,30 @@ function LoginContent() {
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-4">
-            <Button
-              onClick={handleAtlassianLogin}
-              className="w-full"
-              size="lg"
-              variant="default"
-            >
-              <LogIn className="mr-2 h-5 w-5" />
-              Sign in with Atlassian
-            </Button>
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <Separator />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue as guest
-                </span>
-              </div>
-            </div>
+            {isAtlassianEnabled && (
+              <>
+                <Button
+                  onClick={handleAtlassianLogin}
+                  className="w-full"
+                  size="lg"
+                  variant="default"
+                >
+                  <LogIn className="mr-2 h-5 w-5" />
+                  Sign in with Atlassian
+                </Button>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or continue as guest
+                    </span>
+                  </div>
+                </div>
+              </>
+            )}
 
             <form onSubmit={handleGuestLogin} className="space-y-4">
               <div className="space-y-2">
@@ -151,17 +156,19 @@ function LoginContent() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                variant="outline"
+                variant={isAtlassianEnabled ? "outline" : "default"}
                 disabled={isSubmitting || !name.trim()}
               >
-                {isSubmitting ? 'Continuing...' : 'Continue as Guest'}
+                {isSubmitting ? 'Continuing...' : (isAtlassianEnabled ? 'Continue as Guest' : 'Continue')}
               </Button>
             </form>
           </div>
 
-          <p className="text-xs text-center text-muted-foreground">
-            Guest users can participate in sessions but won't have access to Jira integration
-          </p>
+          {isAtlassianEnabled && (
+            <p className="text-xs text-center text-muted-foreground">
+              Guest users can participate in sessions but won't have access to Jira integration
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
